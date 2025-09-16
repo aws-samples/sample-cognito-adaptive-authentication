@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon Cognito Adaptive Authentication Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; margin-bottom: 40px; }
+        .header h1 { color: #232f3e; margin-bottom: 10px; }
+        .header p { color: #666; font-size: 18px; }
+        .card { background: white; border-radius: 8px; padding: 30px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .form-group { margin: 20px 0; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; }
+        input { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 16px; }
+        input:focus { outline: none; border-color: #ff9900; }
+        .btn { background: #ff9900; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 600; }
+        .btn:hover { background: #e68900; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        .alert { padding: 15px; border-radius: 6px; margin: 15px 0; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .hidden { display: none; }
+        .device-info { background: #f8f9fa; padding: 15px; border-radius: 6px; margin: 15px 0; font-family: monospace; font-size: 14px; }
+        .risk-indicator { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .risk-low { background: #d4edda; color: #155724; }
+        .risk-medium { background: #fff3cd; color: #856404; }
+        .risk-high { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ Amazon Cognito Adaptive Authentication</h1>
+            <p>Experience intelligent risk-based authentication with device fingerprinting</p>
+        </div>
+
+        <!-- Login Section -->
+        <div class="card" id="loginSection">
+            <h2>Login with Adaptive Authentication</h2>
+            <p>Cognito will assess the risk of your login based on device and location factors.</p>
+            
+            <div class="form-group">
+                <label for="username">Username/Email:</label>
+                <input type="text" id="username" placeholder="Enter your username or email">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" placeholder="Enter your password">
+            </div>
+            
+            <button class="btn" onclick="login()" id="loginBtn">Login</button>
+            
+            <div id="loginResult"></div>
+            
+            <div class="device-info">
+                <strong>Device Information Being Collected:</strong><br>
+                <span id="deviceInfo">Loading device fingerprint...</span>
+            </div>
+        </div>
+
+        <!-- MFA Section -->
+        <div class="card hidden" id="mfaSection">
+            <h2>🔐 Multi-Factor Authentication Required</h2>
+            <div class="alert alert-info">
+                Cognito detected elevated risk and requires MFA verification. Check your phone for the SMS code.
+            </div>
+            
+            <div class="form-group">
+                <label for="mfaCode">SMS Verification Code:</label>
+                <input type="text" id="mfaCode" placeholder="Enter 6-digit code" maxlength="6">
+            </div>
+            
+            <button class="btn" onclick="verifyMFA()" id="mfaBtn">Verify Code</button>
+            
+            <div id="mfaResult"></div>
+        </div>
+
+        <!-- Success Section -->
+        <div class="card hidden" id="successSection">
+            <h2>✅ Authentication Successful</h2>
+            <div class="alert alert-success">
+                You have successfully authenticated with Amazon Cognito!
+            </div>
+            
+            <div id="tokenInfo"></div>
+            
+            <button class="btn" onclick="reset()">Try Another Login</button>
+        </div>
+
+        <!-- Info Section -->
+        <div class="card">
+            <h3>How Adaptive Authentication Works</h3>
+            <ul style="margin: 15px 0; padding-left: 20px; line-height: 1.6;">
+                <li><strong>Device Fingerprinting:</strong> Collects browser, OS, and network information</li>
+                <li><strong>Risk Assessment:</strong> Analyzes IP address, location, and device patterns</li>
+                <li><strong>Adaptive Response:</strong> Automatically triggers MFA for suspicious activity</li>
+                <li><strong>Machine Learning:</strong> Improves risk detection over time</li>
+            </ul>
+            
+            <div class="alert alert-info">
+                <strong>Try this:</strong> Login from different browsers, networks, or devices to see how Cognito adapts the authentication requirements based on risk assessment.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSession = null;
+        let currentUsername = null;
+
+        // Display device information
+        function displayDeviceInfo() {
+            const info = {
+                userAgent: navigator.userAgent.substring(0, 80) + '...',
+                language: navigator.language,
+                platform: navigator.platform,
+                screen: `${screen.width}x${screen.height}`,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            };
+            
+            document.getElementById('deviceInfo').innerHTML = 
+                `User Agent: ${info.userAgent}<br>` +
+                `Language: ${info.language}<br>` +
+                `Platform: ${info.platform}<br>` +
+                `Screen: ${info.screen}<br>` +
+                `Timezone: ${info.timezone}`;
+        }
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                showResult('loginResult', 'Please enter both username and password', 'error');
+                return;
+            }
+
+            setLoading('loginBtn', true);
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentUsername = username;
+                    
+                    if (data.challengeName === 'SMS_MFA') {
+                        currentSession = data.session;
+                        showResult('loginResult', data.message, 'info');
+                        showSection('mfaSection');
+                    } else {
+                        showTokens(data.tokens);
+                        showSection('successSection');
+                    }
+                } else {
+                    showResult('loginResult', data.error || 'Login failed', 'error');
+                }
+            } catch (error) {
+                showResult('loginResult', 'Network error: ' + error.message, 'error');
+            } finally {
+                setLoading('loginBtn', false);
+            }
+        }
+
+        async function verifyMFA() {
+            const mfaCode = document.getElementById('mfaCode').value;
+            
+            if (!mfaCode || mfaCode.length !== 6) {
+                showResult('mfaResult', 'Please enter a 6-digit MFA code', 'error');
+                return;
+            }
+
+            setLoading('mfaBtn', true);
+            
+            try {
+                const response = await fetch('/api/verify-mfa', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: currentUsername,
+                        session: currentSession,
+                        mfaCode: mfaCode
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('mfaResult', data.message, 'success');
+                    setTimeout(() => {
+                        showTokens(data.tokens);
+                        showSection('successSection');
+                    }, 1000);
+                } else {
+                    showResult('mfaResult', data.error || 'MFA verification failed', 'error');
+                }
+            } catch (error) {
+                showResult('mfaResult', 'Network error: ' + error.message, 'error');
+            } finally {
+                setLoading('mfaBtn', false);
+            }
+        }
+
+        function showTokens(tokens) {
+            const tokenInfo = document.getElementById('tokenInfo');
+            tokenInfo.innerHTML = `
+                <h4>Authentication Tokens Received:</h4>
+                <div class="device-info">
+                    <strong>Access Token:</strong> ${tokens.accessToken.substring(0, 50)}...<br>
+                    <strong>ID Token:</strong> ${tokens.idToken.substring(0, 50)}...<br>
+                    <strong>Refresh Token:</strong> ${tokens.refreshToken.substring(0, 50)}...
+                </div>
+            `;
+        }
+
+        function showSection(sectionId) {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('mfaSection').classList.add('hidden');
+            document.getElementById('successSection').classList.add('hidden');
+            document.getElementById(sectionId).classList.remove('hidden');
+        }
+
+        function showResult(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+        }
+
+        function setLoading(buttonId, loading) {
+            const button = document.getElementById(buttonId);
+            button.disabled = loading;
+            button.textContent = loading ? 'Processing...' : (buttonId === 'loginBtn' ? 'Login' : 'Verify Code');
+        }
+
+        function reset() {
+            currentSession = null;
+            currentUsername = null;
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('mfaCode').value = '';
+            document.getElementById('loginResult').innerHTML = '';
+            document.getElementById('mfaResult').innerHTML = '';
+            showSection('loginSection');
+        }
+
+        // Initialize
+        displayDeviceInfo();
+    </script>
+</body>
+</html>
