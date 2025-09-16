@@ -35,3 +35,11 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Documentation and test files (not needed for running the app)
+BLOG_POST.md
+test-integration.js
+setup-client.js
+
+# Duplicate library file (keep only the one in public/)
+amazon-cognito-advanced-security-data.min.js
