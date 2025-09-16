@@ -84,7 +84,7 @@ aws cognito-idp admin-create-user \
   --user-pool-id us-east-1_XXXXXXXXX \
   --username testuser@example.com \
   --user-attributes Name=email,Value=testuser@example.com Name=phone_number,Value=+1234567890 \
-  --temporary-password TempPass123! \
+  --temporary-password TemporaryPassword \
   --message-action SUPPRESS
 ```
 

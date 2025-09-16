@@ -139,12 +139,17 @@
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
             };
             
-            document.getElementById('deviceInfo').innerHTML = 
-                `User Agent: ${info.userAgent}<br>` +
-                `Language: ${info.language}<br>` +
-                `Platform: ${info.platform}<br>` +
-                `Screen: ${info.screen}<br>` +
-                `Timezone: ${info.timezone}`;
+            const deviceInfoElement = document.getElementById('deviceInfo');
+            deviceInfoElement.textContent = '';
+            deviceInfoElement.appendChild(document.createTextNode(`User Agent: ${info.userAgent}`));
+            deviceInfoElement.appendChild(document.createElement('br'));
+            deviceInfoElement.appendChild(document.createTextNode(`Language: ${info.language}`));
+            deviceInfoElement.appendChild(document.createElement('br'));
+            deviceInfoElement.appendChild(document.createTextNode(`Platform: ${info.platform}`));
+            deviceInfoElement.appendChild(document.createElement('br'));
+            deviceInfoElement.appendChild(document.createTextNode(`Screen: ${info.screen}`));
+            deviceInfoElement.appendChild(document.createElement('br'));
+            deviceInfoElement.appendChild(document.createTextNode(`Timezone: ${info.timezone}`));
         }
 
         async function login() {
