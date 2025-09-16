@@ -39,7 +39,10 @@ Thumbs.db
 # Documentation and test files (not needed for running the app)
 BLOG_POST.md
 test-integration.js
+
 setup-client.js
+
+THREAT_MODEL.md
 
 # Duplicate library file (keep only the one in public/)
 amazon-cognito-advanced-security-data.min.js
