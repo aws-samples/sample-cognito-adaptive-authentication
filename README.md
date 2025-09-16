@@ -312,7 +312,3 @@ app.use((req, res, next) => {
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-**AWS Samples** | Built with ❤️ for the AWS Community
