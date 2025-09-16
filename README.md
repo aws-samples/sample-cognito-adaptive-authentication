@@ -66,7 +66,7 @@ PORT=3000
 
 1. **App integration** → **App clients** → Select your app client → **Edit**
 2. Under **Advanced authentication settings**:
-   - ✅ Check **"Accept additional user context data"**
+   - Check **"Accept additional user context data"**
    - This enables `EnablePropagateAdditionalUserContextData=true`
 
 #### Configure Risk Responses
@@ -98,7 +98,7 @@ npm run dev
 
 Visit: `http://localhost:3000`
 
-## 🧪 Testing Adaptive Authentication
+## Testing Adaptive Authentication
 
 ### Test Scenarios
 
