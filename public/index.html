@@ -55,6 +55,10 @@
             
             <button class="btn" onclick="login()" id="loginBtn">Login</button>
             
+            <p style="text-align: center; margin-top: 15px;">
+                <a href="#" onclick="changePassword()" style="color: #ff9900; text-decoration: none;">Change Password</a>
+            </p>
+            
             <div id="loginResult"></div>
             
             <div class="device-info">
@@ -108,9 +112,22 @@
         </div>
     </div>
 
+    <script src="amazon-cognito-advanced-security-data.min.js"></script>
     <script>
         let currentSession = null;
         let currentUsername = null;
+        let cognitoConfig = null;
+
+        // Fetch Cognito configuration
+        async function loadCognitoConfig() {
+            try {
+                const response = await fetch('/api/config');
+                cognitoConfig = await response.json();
+                console.log('Cognito config loaded:', cognitoConfig);
+            } catch (error) {
+                console.error('Failed to load Cognito config:', error);
+            }
+        }
 
         // Display device information
         function displayDeviceInfo() {
@@ -141,11 +158,38 @@
 
             setLoading('loginBtn', true);
             
+            // Collect device fingerprint data using Cognito's library
+            let encodedData = null;
+            console.log('Library available:', typeof AmazonCognitoAdvancedSecurityData !== 'undefined');
+            console.log('Config loaded:', !!cognitoConfig);
+            
+            try {
+                if (typeof AmazonCognitoAdvancedSecurityData !== 'undefined' && cognitoConfig) {
+                    encodedData = AmazonCognitoAdvancedSecurityData.getData(
+                        username, 
+                        cognitoConfig.userPoolId,
+                        cognitoConfig.clientId
+                    );
+                    console.log('Device fingerprint collected:', encodedData ? encodedData.substring(0, 50) + '...' : 'Failed');
+                } else {
+                    console.warn('Cognito library or config missing:', {
+                        library: typeof AmazonCognitoAdvancedSecurityData !== 'undefined',
+                        config: !!cognitoConfig
+                    });
+                }
+            } catch (error) {
+                console.error('Device fingerprint error:', error);
+            }
+            
             try {
                 const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ 
+                        username, 
+                        password,
+                        encodedData: encodedData
+                    })
                 });
 
                 const data = await response.json();
@@ -161,6 +205,11 @@
                         showTokens(data.tokens);
                         showSection('successSection');
                     }
+                } else if (data.redirectToHostedUI) {
+                    showResult('loginResult', `${data.error} - Redirecting to Cognito...`, 'info');
+                    setTimeout(() => {
+                        window.location.href = data.hostedUIUrl;
+                    }, 2000);
                 } else {
                     showResult('loginResult', data.error || 'Login failed', 'error');
                 }
@@ -240,6 +289,16 @@
             button.textContent = loading ? 'Processing...' : (buttonId === 'loginBtn' ? 'Login' : 'Verify Code');
         }
 
+        function changePassword() {
+            if (!cognitoConfig) {
+                alert('Configuration not loaded. Please refresh the page.');
+                return;
+            }
+            
+            const changePasswordUrl = `https://${cognitoConfig.domain}.auth.${cognitoConfig.region}.amazoncognito.com/forgotPassword?client_id=${cognitoConfig.clientId}&response_type=code&scope=openid&redirect_uri=${encodeURIComponent('http://localhost:3000')}`;
+            window.location.href = changePasswordUrl;
+        }
+
         function reset() {
             currentSession = null;
             currentUsername = null;
@@ -252,7 +311,12 @@
         }
 
         // Initialize
-        displayDeviceInfo();
+        async function initialize() {
+            await loadCognitoConfig();
+            displayDeviceInfo();
+        }
+        
+        initialize();
     </script>
 </body>
 </html>

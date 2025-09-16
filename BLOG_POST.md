@@ -96,7 +96,33 @@ if (result.ChallengeName === 'SMS_MFA') {
 }
 ```
 
-## Configuring Risk Responses
+### Hosted UI Integration
+
+For complex flows like password changes or MFA setup, redirect to Cognito's hosted UI:
+
+```javascript
+// Handle challenges requiring hosted UI
+if (error.name === 'NewPasswordRequiredException') {
+  res.json({
+    redirectToHostedUI: true,
+    hostedUIUrl: `https://${cognitoDomain}.auth.${region}.amazoncognito.com/login?client_id=${clientId}&response_type=code&scope=openid&redirect_uri=${redirectUri}`
+  });
+}
+```
+
+## Configuring Cognito for Adaptive Authentication
+
+### Enable App Client Settings
+
+First, configure your app client to accept device data:
+
+1. **Cognito Console** → **User Pools** → **App integration** → **App clients**
+2. Select your app client → **Edit**
+3. Under **Advanced authentication settings**:
+   - ✅ Check **"Accept additional user context data"**
+   - This enables `EnablePropagateAdditionalUserContextData=true`
+
+### Configure Risk Responses
 
 In the Cognito console, you can configure how to respond to different risk levels:
 
