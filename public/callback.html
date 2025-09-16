@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Authentication Complete</title>
+</head>
+<body>
+    <h1>Authentication Complete</h1>
+    <p>Processing authentication result...</p>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const error = urlParams.get('error');
+        
+        if (code) {
+            // Success - redirect back to main app
+            window.location.href = '/';
+        } else if (error) {
+            alert('Authentication failed: ' + error);
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>

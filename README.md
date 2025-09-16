@@ -48,6 +48,8 @@ AWS_REGION=us-east-1
 COGNITO_USER_POOL_ID=us-east-1_XXXXXXXXX
 COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
 COGNITO_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+COGNITO_DOMAIN=your-cognito-domain
+REDIRECT_URI=http://localhost:3000/callback
 PORT=3000
 ```
 
@@ -59,6 +61,13 @@ PORT=3000
 2. Select your User Pool
 3. **App integration** → **Advanced security**
 4. Set to **Enforced** mode
+
+#### Configure App Client
+
+1. **App integration** → **App clients** → Select your app client → **Edit**
+2. Under **Advanced authentication settings**:
+   - ✅ Check **"Accept additional user context data"**
+   - This enables `EnablePropagateAdditionalUserContextData=true`
 
 #### Configure Risk Responses
 
@@ -124,6 +133,15 @@ View authentication events in:
 - **Cognito Console** → **Users** → Select user → **User details**
 - **API**: `AdminListUserAuthEvents`
 
+## 🔄 Hosted UI Integration
+
+The app automatically redirects to Cognito's hosted UI for:
+- **Password changes** (NEW_PASSWORD_REQUIRED)
+- **MFA setup** (UserNotConfirmedException)
+- **Complex authentication flows**
+
+Configure your Cognito domain and callback URL in `.env`.
+
 ## 🔧 Configuration Options
 
 ### Risk Response Actions
@@ -137,23 +155,36 @@ View authentication events in:
 }
 ```
 
-### Custom Device Data
+### Device Fingerprinting Implementation
 
-Extend device fingerprinting:
+This demo uses the official Amazon Cognito Advanced Security Data library:
 
+**Client-side (JavaScript):**
+```javascript
+// Collect device fingerprint using Cognito's library
+const encodedData = AmazonCognitoAdvancedSecurityData.getData(
+  username, 
+  userPoolId,
+  clientId
+);
+```
+
+**Server-side (Node.js):**
 ```javascript
 function collectDeviceData(req) {
   return {
-    IpAddress: getClientIP(req),
-    EncodedData: Buffer.from(JSON.stringify({
-      userAgent: req.headers['user-agent'],
-      acceptLanguage: req.headers['accept-language'],
-      screenResolution: req.body.screenResolution, // From client
-      timezone: req.body.timezone,                  // From client
-      deviceFingerprint: generateFingerprint(req)
-    })).toString('base64')
+    IpAddress: await getClientIP(req),
+    EncodedData: req.body.encodedData || fallbackFingerprint(req)
   };
 }
+
+// Include in Cognito authentication
+const params = {
+  AuthFlow: 'USER_PASSWORD_AUTH',
+  ClientId: process.env.COGNITO_CLIENT_ID,
+  UserContextData: deviceData, // <- Key for adaptive auth
+  AuthParameters: { /* ... */ }
+};
 ```
 
 ## 🛡️ Security Features
