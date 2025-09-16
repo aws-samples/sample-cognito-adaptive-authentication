@@ -210,8 +210,8 @@ Cognito evaluates:
 ```javascript
 POST /api/login
 {
-  "username": "user@example.com",
-  "password": "password123"
+  "username": "",
+  "password": ""
 }
 
 // Response - Low Risk
